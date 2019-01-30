@@ -1,0 +1,96 @@
+\begin{lstlisting}
+Sets
+  i supply bases
+  j demand bases
+  k item types /super, standard/
+  l aircraft
+  c index for climb /0*8/
+  ws given weights;
+
+Parameters
+   Ed(j,k)       expected demand at base j for item k
+   s(i,k)        supply inventory at base i of item k
+   w(k)          weight of item k
+   h(j,k)        holding cost ($) at base j of item k
+   p(j,k)        penalty for shorting demand at base j of item k
+   alt(l)        the altitude of aircraft l
+   wg(l,ws)      weight parameters of aircraft l
+
+   maxFuel(l,i,j) fuel to fly the max payload for distance i j and acrft
+   baseFuel(l,i,j);
+
+$onecho > taskout.txt
+Set = i          rng=SupplyBases!a1          rdim=1
+Set = j          rng=DemandBases!a1                 rdim=1
+Set= l           rng=Aircraft!a8      rdim=1
+Set=ws           rng=Aircraft!b7:K7            cdim=1 IgnoreColumns=B
+Par=w            rng=Items!b2         rdim=1
+Par = wg         rng=Aircraft!a7      rdim=1  cdim=1 IgnoreColumns=B
+Par= maxFuel     rng=maxfuel!a1      rdim=1 cdim=2
+Par=baseFuel     rng=basefuel!a1     rdim=1 cdim=2
+$offecho
+
+$call GDXXRW indata_solve2.xlsm trace=3 @taskout.txt
+$GDXIN indata_solve2.gdx
+$LOADDC i j l ws wg maxFuel baseFuel
+$GDXIN
+
+Variables
+  z           objective function value;
+
+z.lo=0;
+z.up=100000;
+
+Positive Variables
+wp(i,j,l)     payload weight for route i to j on aircraft l
+x(i,j,k,l)   number of pallets from i to j of item k to fly on aircraft l  ;
+wp.up(i,j,l)=270; #maximum payload weight of C5
+x.up(i,j,k,l)=36;
+
+Binary Variables
+  y(i,j,l)     1 if from base i to base j aircraft l is assigned to deliver something
+
+Equations
+  objfun                    defines the overall objective function
+  meetexpdemand(j,k)        Must meet expected demand
+  payloadWeightbound(i,j,l) cannot exceed aircraft weight capacity
+  spacebound(i,j,l)         cannot exceed aircraft floor space capacity
+  oneassignmentperac(l)     only assign an aircraft to one i-j combination
+*  supply(i,k)               cannot exceed available supply
+  payload(i,j,l)            payload weight;
+
+objfun.. z=e=  1*sum(i,sum(j,sum(l,(maxFuel(l,i,j)*wp(i,j,l)+
+baseFuel(l,i,j))*y(i,j,l))));
+
+************************Constraints************************
+meetexpdemand(j,k)..         sum(i,sum(l,x(i,j,k,l))) =e= Ed(j,k);
+payloadWeightbound(i,j,l)..  w('super')*x(i,j,'super',l)+
+    w('standard')*x(i,j,'standard',l) =l= wg(l,'wapmax')*y(i,j,l);
+spacebound(i,j,l)..          x(i,j,'super',l)+
+                     x(i,j,'standard',l)=l= wg(l,'scap')*y(i,j,l);
+oneassignmentperac(l)..      sum(i,sum(j,y(i,j,l))) =l= 1;
+payload(i,j,l)..             wp(i,j,l)=e=w('super')*x(i,j,'super',l)+
+                                    w('standard')*x(i,j,'standard',l)
+
+Model MausModel / all /;
+
+Ed('ETAR','super')=22;  Ed('ETAR','standard')=7;
+Ed('RKSO','super')=22;  Ed('RKSO','standard')=7;
+
+w('super')=2.6; w('standard')=2.6;
+
+option nlp=minos;
+option minlp=baron;
+
+Solve MausModel minimizing z using minlp;
+
+execute_unload 'indata_solve2.gdx', x,y,wp, z, wg;
+execute 'gdxxrw.exe indata_solve2.gdx O=indata_solve2.xlsm var= 
+x.l rng=CargoAllocation!a1' ;
+execute 'gdxxrw.exe indata_solve2.gdx O=indata_solve2.xlsm var=
+y.l rng=ACAllocation!a1' ;
+execute 'gdxxrw.exe indata_solve2.gdx O=indata_solve2.xlsm var=
+wp.l rng=FinalPayload!a1' ;;
+execute 'gdxxrw.exe indata_solve2.gdx O=indata_solve2.xlsm var=
+z.l rng=GAMScost!a1' ;
+\end{lstlisting}

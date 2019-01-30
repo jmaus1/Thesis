@@ -1,0 +1,201 @@
+This is Evan's, just keeping it for reference for when I start my Appendices 
+
+The Following code utilizes the function described in Appendix A and uses them to determine the sentiment in the Protest Dataset
+
+\lstloadlanguages{R}
+\lstset{language=R,basicstyle=\smaller[2],commentstyle=\rmfamily\smaller,
+  showstringspaces=false,%
+  xleftmargin=4ex,literate={<-}{{$\leftarrow$}}1 {~}{{$\sim$}}1}
+\lstset{escapeinside={(*}{*)}}   
+
+
+\begin{lstlisting}
+
+set.seed(1234)
+
+# Access Twitter API ------------------------------------------------------------
+
+consumer_key <- "xxxxxxxxxxxxxxxxxx"
+consumer_secret <- "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+access_token <- "xxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxx"
+access_secret <- "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+
+ht <- c("#antifa", 
+        "#resistance",
+        "#fascism",
+        "#blm",
+        "#blacklivesmatter",
+        "#blackpower",
+        "#takeaknee",
+        "#indivisible",
+        "#americafirst",
+        "#maga")
+
+no.of.tweets <- 1000
+
+# Scrape Data from Twitter API for each #hashtag --------------------------
+
+twitter_data <- list()
+for (i in ht) {
+  twitter_data[[i]] <- twListToDF(searchTwitter(i, n = no.of.tweets, lang = "en"))%>% 
+    mutate(hashtag = substr(i, 2, nchar(i)))
+}
+
+twitter_data_171107_Protest <- map_df(twitter_data,rbind)
+save(twitter_data_171107_Protest, file = "twitter_data_171107_Protest.RData")
+
+# Combine Protest Data Files ------------------------------------------
+
+# Load in previously saved Protest .RData files
+load("twitter_data_171023_Protest.RData")
+load("twitter_data_171024_Protest.RData")
+load("twitter_data_171025_Protest.RData")
+load("twitter_data_171026_Protest.RData")
+load("twitter_data_171027_Protest.RData")
+load("twitter_data_171029_Protest.RData")
+load("twitter_data_171030_Protest.RData")
+load("twitter_data_171031_Protest.RData")
+load("twitter_data_171101_Protest.RData")
+load("twitter_data_171102_Protest.RData")
+load("twitter_data_171103_Protest.RData")
+load("twitter_data_171104_Protest.RData")
+load("twitter_data_171105_Protest.RData")
+load("twitter_data_171106_Protest.RData")
+load("twitter_data_171107_Protest.RData")
+
+# Bind North Korea files into one Data Frame
+TD_PRO <- rbind(twitter_data_171023_Protest, 
+               twitter_data_171024_Protest,
+               twitter_data_171025_Protest,
+               twitter_data_171026_Protest, 
+               twitter_data_171027_Protest,
+               twitter_data_171029_Protest, 
+               twitter_data_171030_Protest, 
+               twitter_data_171031_Protest, 
+               twitter_data_171101_Protest, 
+               twitter_data_171102_Protest, 
+               twitter_data_171103_Protest, 
+               twitter_data_171104_Protest, 
+               twitter_data_171105_Protest, 
+               twitter_data_171106_Protest, 
+               twitter_data_171107_Protest) %>% 
+  dplyr::mutate(created = lubridate::as_datetime(created)) %>% 
+  dplyr::mutate(key = paste(screenName, created)) %>% 
+  distinct(key, .keep_all = TRUE) # filter out all duplicate tweets.  
+
+
+
+# Hashtag Sentiment Analysis ----------------------------------------------
+
+#### Data Exploration ####
+
+# Unigram
+PRO_HT_Unigram <- TD.Unigram(DataFrame = TD_PRO)
+
+# Bigram
+PRO_HT_Bigram <- TD.Bigram(DataFrame = TD_PRO)
+
+# Trigram
+PRO_HT_Trigram <- TD.Trigram(DataFrame = TD_PRO)
+
+# Bigram Network
+PRO_HT_Bigram_Network <- TD.Bigram.Network(BiGramDataFrame = PRO_HT_Bigram, number = 400)
+
+#### Tidy and Socres #### 
+TD_PRO_HT_Tidy <- TD.Tidy(DataFrame = TD_PRO)
+
+PRO_HT_Scores <- TD.Scores(DataFrameTidy = TD_PRO_HT_Tidy, HT_Topic = "hashtag")
+
+#### Word Grams #### 
+PRO_HT_PosNeg <- TD.PosNeg.Words(DataFrameTidy = TD_PRO_HT_Tidy)
+
+# filter out "trump"
+PRO_HT_PosNeg_trump <- TD.PosNeg.Words(DataFrameTidy = TD_PRO_HT_Tidy, filterword = "trump")
+
+# Bigram Network
+PRO_HT_Bigram_Network <- TD.Bigram.Network(BiGramDataFrame = PRO_HT_Bigram, number = 500)
+
+#### Min / Max Scores #### 
+PRO_HT_Min <- TD.Min.Scores(DataFrameTidyScores = PRO_HT_Scores, HT_Topic = "hashtag")
+# PRO_HT_Min_dprk <- TD.Min.Scores(DataFrameTidyScores = PRO_HT_Scores, 
+ HT_Topic = "hashtag", HT_Topic_Seletion = "dprk")
+
+PRO_HT_Max <- TD.Max.Scores(DataFrameTidyScores = PRO_HT_Scores, HT_Topic = "hashtag")
+# PRO_HT_Max_dprk <- TD.Max.Scores(DataFrameTidyScores = PRO_HT_Scores, 
+ HT_Topic = "hashtag",HT_Topic_Seletion = "dprk")
+
+#### Word Correlations ####
+PRO_HT_Word_Corr <- TD.Word.Corr(DataFrameTidy = TD_PRO_HT_Tidy, n = 1100)
+
+PRO_HT_Word_Corr_Plot <- TD.Word.Corr.Plot(WordCorr = PRO_HT_Word_Corr, 
+ layout = "fr", Correlation = 0.1)
+
+#### Sentiment Distributions ####
+PRO_HT_Corp_Dist <- TD.Corups.Distribution(DataFrameTidyScores = PRO_HT_Scores)
+
+PRO_HT_Dist <- TD.Distribution(DataFrameTidyScores = PRO_HT_Scores, HT_Topic = "hashtag")
+
+#### Visualizations ####
+PRO_HT_Box <- TD.BoxPlot(DataFrameTidyScores = PRO_HT_Scores, HT_Topic = "hashtag")
+
+PRO_HT_Violin <- TD.ViolinPlot(DataFrameTidyScores = PRO_HT_Scores, HT_Topic = "hashtag")
+
+PRO_HT_Time <- TD.TimeScale(DataFrameTidyScores = PRO_HT_Scores, HT_Topic = "hashtag")
+
+PRO_HT_Map <- TD.WorldMap(DataFrame = TD_PRO, HT_Topic = "hashtag")
+
+# LDA Sentiment Analysis --------------------------------------------------
+
+#### LDA ####
+
+# Produce graph of optimal number of topics
+PRO_LDA_Topics_Plot <- Number.Topics(DataFrame = TD_PRO, 
+ num_cores = 2L, min_clusters = 2, max_clusters = 16,  skip = 1)
+
+# Tweet Topics
+TD_PRO_LDA_6 <- Tweet.Topics(DataFrame = TD_PRO, clusters = 6, num_terms = 10)
+TD_PRO_LDA_8 <- Tweet.Topics(DataFrame = TD_PRO, clusters = 8, num_terms = 10)
+TD_PRO_LDA_16 <- Tweet.Topics(DataFrame = TD_PRO, clusters = 16, num_terms = 10)
+
+# Choose 7
+TD_PRO_LDA <- Tweet.Topics(DataFrame = TD_PRO, clusters = 7, num_terms = 10)
+
+# Rename Topics
+TD_PRO_LDA <- TD_PRO_LDA %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^1$", "politics")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^2$", "resistance")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^3$", "maga")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^4$", "antifa")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^5$", "protest")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^6$", "blm")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^7$", "nfl"))
+
+TD_PRO_LDA_Tidy <- TD.Tidy(DataFrame = TD_PRO_LDA)
+
+PRO_LDA_Scores <- TD.Scores(DataFrameTidy = TD_PRO_LDA_Tidy, HT_Topic = "topic")
+
+#### Min / Max Scores #### 
+PRO_LDA_Min <- TD.Min.Scores(DataFrameTidyScores = PRO_LDA_Scores, HT_Topic = "topic")
+PRO_LDA_Min_sanctions <- TD.Min.Scores(DataFrameTidyScores = PRO_LDA_Scores, 
+ HT_Topic = "topic", HT_Topic_Seletion = "sanctions")
+
+PRO_LDA_Max <- TD.Max.Scores(DataFrameTidyScores = PRO_LDA_Scores, HT_Topic = "topic")
+PRO_LDA_Max_msanctions <- TD.Max.Scores(DataFrameTidyScores = PRO_LDA_Scores, 
+ HT_Topic = "topic", HT_Topic_Seletion = "sanctions")
+
+#### Sentiment Distributions ####
+PRO_LDA_Corp_Dist <- TD.Corups.Distribution(DataFrameTidyScores = PRO_LDA_Scores)
+
+PRO_LDA_Dist <- TD.Distribution(DataFrameTidyScores = PRO_LDA_Scores, HT_Topic = "topic")
+
+#### Visualizations ####
+PRO_LDA_Box <- TD.BoxPlot(DataFrameTidyScores = PRO_LDA_Scores, HT_Topic = "topic")
+
+PRO_LDA_Violin <- TD.ViolinPlot(DataFrameTidyScores = PRO_LDA_Scores, HT_Topic = "topic")
+
+PRO_LDA_Time <- TD.TimeScale(DataFrameTidyScores = PRO_LDA_Scores, HT_Topic = "topic")
+
+PRO_LDA_Map <- TD.WorldMap(DataFrame = TD_PRO_LDA, HT_Topic = "topic")
+
+\end{lstlisting}

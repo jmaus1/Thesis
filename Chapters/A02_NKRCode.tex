@@ -1,0 +1,228 @@
+This is Evan's, just keeping it for reference for when I start my Appendices 
+
+The Following code utilizes the function described in Appendix A and uses them to determine the sentiment in the North Korea Dataset
+
+\lstloadlanguages{R}
+\lstset{language=R,basicstyle=\smaller[2],commentstyle=\rmfamily\smaller,
+  showstringspaces=false,%
+  xleftmargin=4ex,literate={<-}{{$\leftarrow$}}1 {~}{{$\sim$}}1}
+\lstset{escapeinside={(*}{*)}}   
+
+
+\begin{lstlisting}
+
+set.seed(1234)
+
+# Access Twitter API ------------------------------------------------------------
+
+consumer_key <- "xxxxxxxxxxxxxxxxxx"
+consumer_secret <- "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+access_token <- "xxxxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxx"
+access_secret <- "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+
+ht <- c("#northkorea",
+        "#nuke",
+        "#dprk",
+        "#rocketman",
+        "#missile",
+        "#sanctions",
+        "#test",
+        "#KimJongUn",
+        "#southkorea",
+        "#WWIII",
+        "#ww3")
+
+no.of.tweets <- 1000
+
+# Scrape Data from Twitter API for each #hashtag --------------------------
+
+twitter_data <- list()
+for (i in ht) {
+  twitter_data[[i]] <- twListToDF(searchTwitter(i, n = no.of.tweets, lang = "en"))%>% 
+    mutate(hashtag = substr(i, 2, nchar(i)))
+}
+
+twitter_data_171107_NorthKorea <- map_df(twitter_data,rbind)
+save(twitter_data_171107_NorthKorea, file = "twitter_data_171107_NorthKorea.RData")
+
+# Combine North Korea Data Files ------------------------------------------
+
+# Load in previously saved North Korea .RData files
+load("twitter_data_171023_NorthKorea.RData")
+load("twitter_data_171024_NorthKorea.RData")
+load("twitter_data_171025_NorthKorea.RData")
+load("twitter_data_171026_NorthKorea.RData")
+load("twitter_data_171027_NorthKorea.RData")
+load("twitter_data_171029_NorthKorea.RData")
+load("twitter_data_171030_NorthKorea.RData")
+load("twitter_data_171031_NorthKorea.RData")
+load("twitter_data_171101_NorthKorea.RData")
+load("twitter_data_171102_NorthKorea.RData")
+load("twitter_data_171103_NorthKorea.RData")
+load("twitter_data_171104_NorthKorea.RData")
+load("twitter_data_171105_NorthKorea.RData")
+load("twitter_data_171106_NorthKorea.RData")
+load("twitter_data_171107_NorthKorea.RData")
+
+# Bind North Korea files into one Data Frame
+TD_NK <- rbind(twitter_data_171023_NorthKorea, 
+               twitter_data_171024_NorthKorea,
+               twitter_data_171025_NorthKorea,
+               twitter_data_171026_NorthKorea, 
+               twitter_data_171027_NorthKorea,
+               twitter_data_171029_NorthKorea, 
+               twitter_data_171030_NorthKorea, 
+               twitter_data_171031_NorthKorea, 
+               twitter_data_171101_NorthKorea, 
+               twitter_data_171102_NorthKorea, 
+               twitter_data_171103_NorthKorea, 
+               twitter_data_171104_NorthKorea, 
+               twitter_data_171105_NorthKorea, 
+               twitter_data_171106_NorthKorea, 
+               twitter_data_171107_NorthKorea) %>% 
+  dplyr::mutate(key = paste(screenName, created)) %>% 
+  distinct(key, .keep_all = TRUE) # filter out all duplicate tweets.  
+
+
+# Hashtag Sentiment Analysis ----------------------------------------------
+
+#### Data Exploration ####
+
+# Unigram
+NK_HT_Unigram <- TD.Unigram(DataFrame = TD_NK)
+
+# Bigram
+NK_HT_Bigram <- TD.Bigram(DataFrame = TD_NK)
+
+# Trigram
+NK_HT_Trigram <- TD.Trigram(DataFrame = TD_NK)
+
+#### Merge Terms ####
+
+# Merge terms
+TD_NK_Merge <- Merge.Terms(DataFrame = TD_NK, "north korea", "north_korea")
+TD_NK_Merge <- Merge.Terms(DataFrame = TD_NK_Merge, "south korea", "south_korea")
+TD_NK_Merge <- Merge.Terms(DataFrame = TD_NK_Merge, "southkorea", "south_korea")
+TD_NK_Merge <- Merge.Terms(DataFrame = TD_NK_Merge, "northkorea", "south_korea")
+TD_NK_Merge <- Merge.Terms(DataFrame = TD_NK_Merge, "ballistic missile", "ballistic_missile")
+TD_NK_Merge <- Merge.Terms(DataFrame = TD_NK_Merge, "nuclear test", "nuclear_test")
+TD_NK_Merge <- Merge.Terms(DataFrame = TD_NK_Merge, "president trump", "pdjt")
+
+# Unigram
+NK_HT_Unigram <- TD.Unigram(DataFrame = TD_NK_Merge)
+
+# Bigram
+NK_HT_Bigram <- TD.Bigram(DataFrame = TD_NK_Merge)
+
+# Trigram
+NK_HT_Trigram <- TD.Trigram(DataFrame = TD_NK_Merge)
+
+# Bigram Network
+NK_HT_Bigram_Network <- TD.Bigram.Network(BiGramDataFrame = NK_HT_Bigram, number = 400)
+
+#### Tidy and Socres #### 
+TD_NK_HT_Tidy <- TD.Tidy(DataFrame = TD_NK_Merge)
+
+NK_HT_Scores <- TD.Scores(DataFrameTidy = TD_NK_HT_Tidy, HT_Topic = "hashtag")
+
+#### Word Grams #### 
+NK_HT_PosNeg <- TD.PosNeg.Words(DataFrameTidy = TD_NK_HT_Tidy)
+
+# filter out "trump"
+NK_HT_PosNeg_trump <- TD.PosNeg.Words(DataFrameTidy = TD_NK_HT_Tidy, filterword = "trump")
+
+# Bigram Network
+stop  <- TD.Bigram.Network(BiGramDataFrame = NK_HT_Bigram, number = 400)
+
+#### Min / Max Scores #### 
+NK_HT_Min <- TD.Min.Scores(DataFrameTidyScores = NK_HT_Scores, HT_Topic = "hashtag")
+NK_HT_Min_dprk <- TD.Min.Scores(DataFrameTidyScores = NK_HT_Scores, 
+                                HT_Topic = "hashtag", 
+                                HT_Topic_Seletion = "dprk")
+
+NK_HT_Max <- TD.Max.Scores(DataFrameTidyScores = NK_HT_Scores, HT_Topic = "hashtag")
+NK_HT_Max_dprk <- TD.Max.Scores(DataFrameTidyScores = NK_HT_Scores, 
+                                HT_Topic = "hashtag", 
+                                HT_Topic_Seletion = "dprk")
+
+#### Word Correlations ####
+NK_HT_Word_Corr <- TD.Word.Corr(DataFrameTidy = TD_NK_HT_Tidy, n = 1000)
+
+NK_HT_Word_Corr_Plot <- TD.Word.Corr.Plot(WordCorr = NK_HT_Word_Corr, 
+                                          layout = "fr",
+                                          Correlation = 0.1)
+
+#### Sentiment Distributions ####
+NK_HT_Corp_Dist <- TD.Corups.Distribution(DataFrameTidyScores = NK_HT_Scores)
+
+NK_HT_Dist <- TD.Distribution(DataFrameTidyScores = NK_HT_Scores, HT_Topic = "hashtag")
+
+#### Visualizations ####
+NK_HT_Box <- TD.BoxPlot(DataFrameTidyScores = NK_HT_Scores, HT_Topic = "hashtag")
+
+NK_HT_Violin <- TD.ViolinPlot(DataFrameTidyScores = NK_HT_Scores, HT_Topic = "hashtag")
+
+NK_HT_Time <- TD.TimeScale(DataFrameTidyScores = NK_HT_Scores, HT_Topic = "hashtag")
+
+NK_HT_Map <- TD.WorldMap(DataFrame = TD_NK_Merge, HT_Topic = "hashtag")
+
+# LDA Sentiment Analysis --------------------------------------------------
+
+#### LDA ####
+
+# Produce graph of optimal number of topics
+NK_LDA_Topics_Plot <- Number.Topics(DataFrame = TD_NK_Merge, 
+                                    num_cores = 2L, 
+                                    min_clusters = 2, 
+                                    max_clusters = 16, 
+                                    skip = 1)
+
+# Tweet Topics
+TD_NK_LDA_6 <- Tweet.Topics(DataFrame = TD_NK_Merge, clusters = 6, num_terms = 10)
+TD_NK_LDA_8 <- Tweet.Topics(DataFrame = TD_NK_Merge, clusters = 8, num_terms = 10)
+TD_NK_LDA_16 <- Tweet.Topics(DataFrame = TD_NK_Merge, clusters = 16, num_terms = 10)
+
+# Choose 7
+TD_NK_LDA <- Tweet.Topics(DataFrame = TD_NK_Merge, clusters = 7, num_terms = 10)
+
+# Rename Topics
+TD_NK_LDA <- TD_NK_LDA %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^1$", "test")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^2$", "missile")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^3$", "politics")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^4$", "southkorea")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^5$", "dogmeat")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^6$", "sanctions")) %>% 
+  dplyr::mutate(Topic = stringr::str_replace_all(Topic, "^7$", "nuke")) 
+
+TD_NK_LDA_Tidy <- TD.Tidy(DataFrame = TD_NK_LDA)
+
+NK_LDA_Scores <- TD.Scores(DataFrameTidy = TD_NK_LDA_Tidy, HT_Topic = "topic")
+
+#### Min / Max Scores #### 
+NK_LDA_Min <- TD.Min.Scores(DataFrameTidyScores = NK_LDA_Scores, HT_Topic = "topic")
+NK_LDA_Min_sanctions <- TD.Min.Scores(DataFrameTidyScores = NK_LDA_Scores, 
+                                      HT_Topic = "topic", 
+                                      T_Topic_Seletion = "sanctions")
+
+NK_LDA_Max <- TD.Max.Scores(DataFrameTidyScores = NK_LDA_Scores, HT_Topic = "topic")
+NK_LDA_Max_msanctions <- TD.Max.Scores(DataFrameTidyScores = NK_LDA_Scores, 
+                                       HT_Topic = "topic", 
+                                       HT_Topic_Seletion = "sanctions")
+
+#### Sentiment Distributions ####
+NK_LDA_Corp_Dist <- TD.Corups.Distribution(DataFrameTidyScores = NK_LDA_Scores)
+
+NK_LDA_Dist <- TD.Distribution(DataFrameTidyScores = NK_LDA_Scores, HT_Topic = "topic")
+
+#### Visualizations ####
+NK_LDA_Box <- TD.BoxPlot(DataFrameTidyScores = NK_LDA_Scores, HT_Topic = "topic")
+
+NK_LDA_Violin <- TD.ViolinPlot(DataFrameTidyScores = NK_LDA_Scores, HT_Topic = "topic")
+
+NK_LDA_Time <- TD.TimeScale(DataFrameTidyScores = NK_LDA_Scores, HT_Topic = "topic")
+
+NK_LDA_Map <- TD.WorldMap(DataFrame = TD_NK_LDA, HT_Topic = "topic")
+
+\end{lstlisting}

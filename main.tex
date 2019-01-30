@@ -1,0 +1,150 @@
+\documentclass[12pt,letterpaper,oneside]{book}
+
+\usepackage{amsmath}
+%\usepackage{amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{esvect}
+\usepackage{caption}
+\usepackage{multirow}
+\usepackage{hyperref}
+
+%\usepackage[utf8]{inputenc}
+\DeclareFixedFont{\ttb}{T1}{txtt}{bx}{n}{9} % for bold
+\DeclareFixedFont{\ttm}{T1}{txtt}{m}{n}{9}  % for normal
+% Defining colors
+\usepackage{color}
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+\usepackage{listings}
+
+\lstdefinestyle{Common}
+{
+    extendedchars=\true,
+    language={[Visual]Basic},
+    frame=single,
+    %===========================================================
+    framesep=3pt,%expand outward.
+    framerule=0.4pt,%expand outward.
+    xleftmargin=3.4pt,%make the frame fits in the text area. 
+    xrightmargin=3.4pt,%make the frame fits in the text area.
+    %=========================================================== 
+    rulecolor=\color{Red}
+}
+
+
+\usepackage{./afitStyleFiles/afitThesis}
+\usepackage{./afitStyleFiles/sf298}
+\graphicspath{{./Figures/}}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\errorcontextlines 10000
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{adjustbox}
+\usepackage{subfig}
+\usepackage{tabularx}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{relsize} 
+\usepackage{placeins}
+\usepackage{url}
+
+
+
+
+
+%emojis
+\usepackage{graphicx}
+
+%subsections
+\usepackage{titlesec}
+\setcounter{secnumdepth}{4}
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+\input{Preamble/titlePage}
+%\input{Preamble/myFigures}		<--Will want to comment back in at some point
+%\input{Preamble/commonSymbols}	<--Will want to comment back in at some point
+
+%These don't work-- 
+%\usepackage{indentfirst}
+%\setlength{\parindent}{4em}
+
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+
+%\def\nopunct{\spacefactor 1007 }
+%\def\frenchspacing{\sfcode`\.1006\sfcode`\?1005\sfcode`\!1004%
+%\sfcode`\:1003\sfcode`\;1002\sfcode`\,1001 }
+
+\begin{document}
+
+%___________________________________
+%Introductory Information
+
+%\frontmatter
+%	\flyleaf
+ %   \disclaimerpage
+%	\titlepageAFIT
+%	\committeepage
+ %   \input{Front/abstract}
+  %  \input{Front/dedication}
+  %  \input{Front/acknowledgements}
+  %  \tableofcontents
+  %  \listoffigures
+  %  \listoftables
+\mainmatter
+
+
+%___________________________________
+%Chapter 1 -- Introduction
+ \chapter{Introduction}\label{ch1}
+  \input{Chapters/01_Introduction}
+
+%___________________________________
+%Chapter 2 -- Literature Review
+\chapter{Literature Review}\label{ch2}
+ \input{Chapters/02_LiteratureReview}
+
+%___________________________________
+%Chapter 3 -- Methodology
+  \chapter{Methodology}\label{ch3}
+   \input{Chapters/03_Methodology}
+
+%___________________________________
+%Chapter 4 -- Analysis
+ \chapter{Analysis}\label{ch4}
+  \input{Chapters/04_Analysis}
+
+%___________________________________
+%Chapter 5 -- Conclusion
+ \chapter{Conclusions and Future Research}\label{ch5}
+  \input{Chapters/05_Conclusion}
+
+%Appendix Section
+%___________________________________
+\appendix
+	\chapter{Visual Basic for Applications Code}\label{A01_VBA}
+		\input{Chapters/A01_VBA}
+	\chapter{General Algebraic Modeling System Code}\label{A02_GAMS}
+		\input{Chapters/A02_GAMS}
+
+%Bibliography
+%%___________________________________
+\backmatter
+	\singlespace
+    \Urlmuskip=0mu plus 1mu\relax
+    \raggedright
+\bibliographystyle{ieeetr}
+	\bibliography{litReview.bib} 
+	\clearpage
+    \pagebreak
+  %  \input{Back/SF298}
+
+    
+\end{document}
